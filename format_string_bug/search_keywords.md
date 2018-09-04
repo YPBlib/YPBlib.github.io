@@ -1,6 +1,6 @@
 # format string
 
-* PLT GOT (字符串格式化 got覆写)
+* PLT GOT (字符串格式化 got覆写)  https://bbs.pediy.com/thread-246373.htm ELF重定位
 * pwntools -> get remote libc version (查看elf libc版本)
 * http://www.cnblogs.com/xingyun/archive/2011/12/10/2283149.html
 * https://blog.csdn.net/nibiru_holmes/article/details/60967036
@@ -33,4 +33,14 @@
 * http://www-inst.eecs.berkeley.edu/~cs161/fa08/papers/stack_smashing.pdf
 * https://bbs.pediy.com/thread-42687.htm
 * http://www.cultdeadcow.com/cDc_files/cDc-351/index.html
-* 
+
+
+
+## CS155
+
+* https://crypto.stanford.edu/cs155/papers/
+* https://crypto.stanford.edu/cs155/
+* https://crypto.stanford.edu/cs155/syllabus.html
+* https://crypto.stanford.edu/cs155/lectures/01-intro.pdf
+* https://crypto.stanford.edu/cs155/info.html
+* https://crypto.stanford.edu/cs155/staff.html
