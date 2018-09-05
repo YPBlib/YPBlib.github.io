@@ -12,6 +12,8 @@
 * https://www.anquanke.com/post/id/85785
 * https://crypto.stanford.edu/cs155/papers/formatstring-1.2.pdf
 * http://phrack.org/issues/59/7.html
+* http://staff.ustc.edu.cn/~bjhua/courses/security/2014/readings/stackguard-bypass.pdf
+* http://phrack.org/issues/56/5.html
 
 
 
@@ -44,3 +46,9 @@
 * https://crypto.stanford.edu/cs155/lectures/01-intro.pdf
 * https://crypto.stanford.edu/cs155/info.html
 * https://crypto.stanford.edu/cs155/staff.html
+
+
+
+## aslr
+
+* https://bbs.pediy.com/thread-226637.htm
