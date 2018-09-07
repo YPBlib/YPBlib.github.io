@@ -30,6 +30,14 @@
 
 
 
+# GOT&PLT
+
+* https://www.cnblogs.com/xingyun/archive/2011/12/10/2283149.html
+* https://blog.csdn.net/qq_18661257/article/details/54694748
+* http://www.cnblogs.com/pannengzhi/p/2018-04-09-about-got-plt.html
+
+
+
 # bof
 
 * http://www-inst.eecs.berkeley.edu/~cs161/fa08/papers/stack_smashing.pdf
@@ -38,7 +46,7 @@
 
 
 
-## CS155
+# CS155
 
 * https://crypto.stanford.edu/cs155/papers/
 * https://crypto.stanford.edu/cs155/
@@ -49,6 +57,6 @@
 
 
 
-## aslr
+# aslr
 
 * https://bbs.pediy.com/thread-226637.htm
