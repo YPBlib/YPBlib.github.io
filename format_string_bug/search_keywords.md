@@ -14,28 +14,35 @@
 
 
 
-# pwnable.kr
+# Linux-debug asm
 
-* https://blog.csdn.net/nibiru_holmes/article/details/60967036
-* https://blog.csdn.net/will_wind/article/details/73385441
-* https://www.52pojie.cn/thread-552088-1-1.html
-* http://www.cnblogs.com/liuyimin/p/7446153.html
-* http://www.360zhijia.com/anquan/396921.html/amp
-* https://blog.csdn.net/qq_20307987/article/details/51303824
-* http://weaponx.site/2017/02/13/%E4%B8%80%E4%BA%9Bpwn%E9%A2%98%E7%9B%AE%E7%9A%84%E8%A7%A3%E9%A2%98%E6%80%9D%E8%B7%AF-pwnable-kr/
-* https://blog.csdn.net/weixin_41400278/article/details/78807395
-* http://www.cnblogs.com/binlmmhc/p/6189514.html
+* https://blog.csdn.net/counsellor/article/details/80686758
 
 
 
 # GOT&PLT
 
+* http://www.freebuf.com/articles/system/135685.html
 * https://www.cnblogs.com/xingyun/archive/2011/12/10/2283149.html
 * https://blog.csdn.net/qq_18661257/article/details/54694748
 * http://www.cnblogs.com/pannengzhi/p/2018-04-09-about-got-plt.html
 * http://www.programlife.net/linux-got-plt.html
 * https://blog.csdn.net/nibiru_holmes/article/details/60967036
 * http://phrack.org/issues/56/5.html
+
+
+
+# pwnable.kr
+
+- https://blog.csdn.net/nibiru_holmes/article/details/60967036
+- https://blog.csdn.net/will_wind/article/details/73385441
+- https://www.52pojie.cn/thread-552088-1-1.html
+- http://www.cnblogs.com/liuyimin/p/7446153.html
+- http://www.360zhijia.com/anquan/396921.html/amp
+- https://blog.csdn.net/qq_20307987/article/details/51303824
+- http://weaponx.site/2017/02/13/%E4%B8%80%E4%BA%9Bpwn%E9%A2%98%E7%9B%AE%E7%9A%84%E8%A7%A3%E9%A2%98%E6%80%9D%E8%B7%AF-pwnable-kr/
+- https://blog.csdn.net/weixin_41400278/article/details/78807395
+- http://www.cnblogs.com/binlmmhc/p/6189514.html
 
 
 
