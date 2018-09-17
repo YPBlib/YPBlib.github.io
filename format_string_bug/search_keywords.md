@@ -1,8 +1,6 @@
 # format string
 
-* PLT GOT (字符串格式化 got覆写)  https://bbs.pediy.com/thread-246373.htm ELF重定位
 * pwntools -> get remote libc version (查看elf libc版本)
-* http://www.cnblogs.com/xingyun/archive/2011/12/10/2283149.html
 * https://bbs.pediy.com/thread-228738.htm
 * https://blog.csdn.net/wizardforcel/article/details/70170835?tdsourcetag=s_pctim_aiomsg
 * https://blog.csdn.net/qq_33438733/article/details/72803627
@@ -14,14 +12,9 @@
 
 
 
-# Linux-debug asm
-
-* https://blog.csdn.net/counsellor/article/details/80686758
-
-
-
 # GOT&PLT
 
+* ELF32种重定位  https://bbs.pediy.com/thread-246373.htm 
 * http://www.freebuf.com/articles/system/135685.html
 * https://www.cnblogs.com/xingyun/archive/2011/12/10/2283149.html
 * https://blog.csdn.net/qq_18661257/article/details/54694748
@@ -29,6 +22,10 @@
 * http://www.programlife.net/linux-got-plt.html
 * https://blog.csdn.net/nibiru_holmes/article/details/60967036
 * http://phrack.org/issues/56/5.html
+
+
+
+
 
 
 
