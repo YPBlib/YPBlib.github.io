@@ -1,12 +1,12 @@
 # format string
 
 * pwntools -> get remote libc version (查看elf libc版本)
-* https://bbs.pediy.com/thread-228738.htm
-* https://blog.csdn.net/wizardforcel/article/details/70170835?tdsourcetag=s_pctim_aiomsg
+* https://bbs.pediy.com/thread-228738.htm 京东 2018CTF 第三题 (SMC和ptrace；从pwn方面来说，考察的是格式化漏洞和栈溢出而进行的ROP)
 * https://blog.csdn.net/qq_33438733/article/details/72803627
 * http://www.sohu.com/a/130725162_472906
 * https://www.anquanke.com/post/id/85785
 * https://crypto.stanford.edu/cs155/papers/formatstring-1.2.pdf
+* https://blog.csdn.net/wizardforcel/article/details/70170835?tdsourcetag=s_pctim_aiomsg (对上一条的翻译)
 * http://phrack.org/issues/59/7.html
 * http://staff.ustc.edu.cn/~bjhua/courses/security/2014/readings/stackguard-bypass.pdf
 
