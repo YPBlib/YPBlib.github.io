@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+
+<html lang="zh-cn">
+<meta charset="UTF-8">
+<head>
+    <title>Histogram Example</title>
+</head>
+
+<body>
+<p>
+    ctrl+alt 从虚拟机中退出</p>
+<p>
+<p>gcc -c 只生成 .o 文件</p>
+<p>gcc -o 指定输出文件名</p>
+<p>For executable stack:$ gcc -z execstack -o test test.c</p>
+<p>For non-executable stack:$ gcc -z noexecstack -o test test.c</p>
+<p>gcc -g -f no-stack-protector -o stack1 stack1.c        // 禁用栈保护-g 编译器产生调试信息-z 控制栈是否可执行</p>
+<p>1. shellcode.c</p>
+<p>2. stack.c</p>
+<p>3. exploit.c</p>
+
+
+<p>https://stackoverflow.com/questions/5663097/gcc-lm-lz-lrt-options-what-are-they-about</p>
+
+<p>- lz - (zlib.a zlib.so) is zlib, http://zlib.net/</p>
+<p>-lm -  (libm.a) is the math library as you've worked out (implementation defined AFAIK)</p>
+<p>-lrt- provides POSIX realtime extensions: http://www.s-gms.ms.edus.si/cgi-bin/man-cgi?librt+3LIB</p>
+
+
+<p>大写I 小写l 大写L</p>
+
+<p>大写 I：头文件目录</p>
+<p>大写 L: 库文件目录</p>
+<p>小写l：库的名称</p>
+
+
+<p>.a .so 文件区别</p>
+
+<p>https://stackoverflow.com/questions/9809213/what-are-a-and-so-files</p>
+
+<p>Archive libraries (.a) are statically linked i.e when you compile your program with -c option in gcc. So, if there's any change in library, you need to compile and build your code again.</p>
+
+<p>The advantage of .so (shared object) over .a library is that they are linked during the runtime i.e. after creation of your .o file -o option in gcc. So, if there's any change in .so file, you don't need to recompile your main program. But make sure that your main program is linked to the new .so file with ln command.</p>
+
+<p>.a静态</p>
+
+<p>.so动态</p>
+
+
+
+</body>
+</html>
