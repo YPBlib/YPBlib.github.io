@@ -1,0 +1,19 @@
+<html>
+<head>
+  <title>Evernote Export</title>
+  <basefont face="微软雅黑" size="2" />
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name="exporter-version" content="YXBJ Windows/600475 (zh-CN, DDL); Windows/10.0.0 (Win64);"/>
+  <style>
+    body, td {
+      font-family: 微软雅黑;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+
+
+<div>
+<span><div><br/></div><div><br/></div><div>有亲缘关系的进程 共享打开的文件和文件位置指针</div><div><br/></div><div>不相干的文件不能共享，如果同时读会发生 race condition</div><div><br/></div><div>比如</div><div><br/></div><div>a.c</div><div><br/></div><div style="box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);-en-codeblock:true;"><div>#include &lt;unistd.h&gt;</div><div>#include &lt;sys/un.h&gt;</div><div>#include &lt;sys/socket.h&gt;</div><div>#include &lt;fcntl.h&gt;</div><div>#include &lt;stdio.h&gt;</div><div><br/></div><div>#define file &quot;fd.txt&quot;</div><div><br/></div><div>char buf[100];</div><div><br/></div><div>int main()</div><div>{</div><div>int fd=open(&quot;data.txt&quot;,O_WRONLY);</div><div>buf[0]='A';</div><div>buf[1]='B';</div><div>buf[2]='B';</div><div>write(fd,buf,3);</div><div>sleep(7);</div><div>close(fd);</div><div>return 0;</div><div>}</div></div><div><br/></div><div>b.c</div><div><br/></div><div style="box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);-en-codeblock:true;"><div>#include &lt;unistd.h&gt;</div><div>#include &lt;sys/un.h&gt;</div><div>#include &lt;sys/socket.h&gt;</div><div>#include &lt;fcntl.h&gt;</div><div>#include &lt;stdio.h&gt;</div><div><br/></div><div>#define file &quot;fd.txt&quot;</div><div><br/></div><div>char buf[100];</div><div><br/></div><div>int main()</div><div>{</div><div>int fd=open(&quot;data.txt&quot;,O_WRONLY);</div><div>buf[0]='1';</div><div>buf[1]='2';</div><div>buf[2]='3';</div><div>write(fd,buf,3);</div><div>puts(buf);</div><div>close(fd);</div><div>return 0;</div><div>}</div></div><div><br/></div><div><br/></div><div>先执行a 后执行b</div><div><br/></div><div>结束后 </div><div><br/></div><div style="box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);-en-codeblock:true;"><div>$ cat data.txt</div><div>123</div><div><br/></div></div><div><br/></div><div>write返回成功不代表写入到磁盘，而是仅仅在用户空间缓冲区和内核高速缓存(kernel buffer cache) 之间复制数据</div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div></span>
+</div></body></html>
