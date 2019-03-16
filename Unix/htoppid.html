@@ -1,0 +1,14 @@
+<html>
+<!DOCTYPE html>
+<html lang="zh-cn">
+<meta charset="UTF-8">
+<head>
+  <title>htop显示同一进程中不同线程有各自的pid</title>
+</head>
+
+<body>
+
+
+<div>
+<span><div><div><br/></div><div>a.out 是一个单进程多线程程序。</div><div>在htop下看到了多个a.out有不同的PID</div><div><br/></div><div><br/></div><div><img src="htoppid_files/Image.png" type="image/png" data-filename="Image.png"/></div><div><br/></div><div><br/></div><div>此时查看 /proc/&lt;PID&gt; 目录发现， /proc/&lt;PID&gt;/task 目录下有各个线程的子目录。 </div><div><br/></div><div>获取进程id用 getpid 可以在用户态直接调用。获取线程 id 的函数 gettid 在用户态不能使用。我们可以这样</div><div><br/></div><div style="box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.15);-en-codeblock:true;"><div><br/></div><div>#include &lt;sys/syscall.h&gt;</div><div>printf(&quot;%d %d\n,&quot;,getpid(),syscall(SYS_gettid));</div><div><br/></div><div><br/></div></div><div><br/></div><div><br/></div><div>那么 htop 是如何做到的呢？</div><div>在其源码中并没有 grep 到 gettid 相关的片段，其文档中提到了是通过 /proc/&lt;PID&gt;/task 读取的（待考）。</div><div><br/></div><div><br/></div><hr/><div><br/></div><div>以及 ps -aux ,top 命令只显示 进程ID</div><div>如果要用ps看线程，ps -eLf</div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div></div></span>
+</div></body></html>
