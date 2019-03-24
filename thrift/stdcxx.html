@@ -1,0 +1,186 @@
+
+
+  <!DOCTYPE html>
+  <html lang="zh-cn">
+  <meta charset="UTF-8">
+  <head>
+    <title>thrift C++源码阅读 stdcxx.h</title>
+  </head>
+<body>
+
+
+<div><span><div style="font-size: 14px; margin: 0; padding: 0; width: 100%;"><h1 style="line-height: 160%; box-sizing: content-box; font-weight: 700; font-size: 41px; border-bottom: 3px double #999; color: #000; margin-top: 14px;">Apache thrift C++ 源码阅读</h1>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">thrift 的 C++ 源码主要在这里</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;"><a href="https://thrift.apache.org/download" style="line-height: 160%; box-sizing: content-box; text-decoration: underline; color: #5286bc;">thrift\thrift-0.12.0\lib\cpp\src\thrift</a></p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">先 tree 一下看看目录结构</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;">|-- async
+|   |-- TAsyncBufferProcessor.h
+|   |-- TAsyncChannel.cpp
+|   |-- TAsyncChannel.h
+|   |-- TAsyncChannel.lo
+|   |-- TAsyncChannel.o
+|   |-- TAsyncDispatchProcessor.h
+|   |-- TAsyncProcessor.h
+|   |-- TAsyncProtocolProcessor.cpp
+|   |-- TAsyncProtocolProcessor.h
+|   |-- TAsyncProtocolProcessor.lo
+|   |-- TAsyncProtocolProcessor.o
+|   |-- TConcurrentClientSyncInfo.cpp
+|   |-- TConcurrentClientSyncInfo.h
+|   |-- TConcurrentClientSyncInfo.lo
+|   |-- TConcurrentClientSyncInfo.o
+|   |-- TEvhttpClientChannel.cpp
+|   |-- TEvhttpClientChannel.h
+|   |-- TEvhttpServer.cpp
+|   `-- TEvhttpServer.h
+|-- concurrency
+|   |-- BoostMonitor.cpp
+|   |-- BoostMutex.cpp
+|   |-- BoostThreadFactory.cpp
+|   |-- BoostThreadFactory.h
+|   |-- Exception.h
+|   |-- FunctionRunner.h
+|   |-- Monitor.cpp
+|   |-- Monitor.h
+|   |-- Monitor.lo
+|   |-- Monitor.o
+|   |-- Mutex.cpp
+|   |-- Mutex.h
+|   |-- Mutex.lo
+|   |-- Mutex.o
+|   |-- PlatformThreadFactory.h
+|   |-- PosixThreadFactory.cpp
+|   |-- PosixThreadFactory.h
+|   |-- PosixThreadFactory.lo
+|   |-- PosixThreadFactory.o
+|   |-- StdMonitor.cpp
+|   |-- StdMutex.cpp
+|   |-- StdThreadFactory.cpp
+|   |-- StdThreadFactory.h
+|   |-- Thread.h
+|   |-- ThreadManager.cpp
+|   |-- ThreadManager.h
+|   |-- ThreadManager.lo
+|   |-- ThreadManager.o
+|   |-- TimerManager.cpp
+|   |-- TimerManager.h
+|   |-- TimerManager.lo
+|   |-- TimerManager.o
+|   |-- Util.cpp
+|   |-- Util.h
+|   |-- Util.lo
+|   `-- Util.o
+|-- config.h
+|-- processor
+|   |-- PeekProcessor.cpp
+|   |-- PeekProcessor.h
+|   |-- PeekProcessor.lo
+|   |-- TPipeServer.h
+|   |-- TPipeServer.lo
+|   |-- TPipeServer.o
+|   |-- TServerSocket.cpp
+|   |-- TServerSocket.h
+|   |-- TServerSocket.lo
+|   |-- TServerSocket.o
+|   |-- TServerTransport.h
+|   |-- TShortReadTransport.h
+|   |-- TSimpleFileTransport.cpp
+|   |-- TSimpleFileTransport.h
+|   |-- TSimpleFileTransport.lo
+|   |-- TSimpleFileTransport.o
+|   |-- TSocket.cpp
+|   |-- TSocket.h
+|   |-- TSocket.lo
+|   |-- TSocket.o
+|   |-- TSocketPool.cpp
+|   |-- TSocketPool.h
+|   |-- TSocketPool.lo
+|   |-- TSocketPool.o
+|   |-- TSSLServerSocket.cpp
+|   |-- TSSLServerSocket.h
+|   |-- TSSLServerSocket.lo
+|   |-- TSSLServerSocket.o
+|   |-- TSSLSocket.cpp
+|   |-- TSSLSocket.h
+|   |-- TSSLSocket.lo
+|   |-- TSSLSocket.o
+|   |-- TTransportException.cpp
+|   |-- TTransportException.h
+|   |-- TTransportException.lo
+|   |-- TTransportException.o
+|   |-- TTransport.h
+|   |-- TTransportUtils.cpp
+|   |-- TTransportUtils.h
+|   |-- TTransportUtils.lo
+|   |-- TTransportUtils.o
+|   |-- TVirtualTransport.h
+|   |-- TZlibTransport.cpp
+|   `-- TZlibTransport.h
+|-- TToString.h
+|-- VirtualProfiling.cpp
+|-- VirtualProfiling.lo
+|-- VirtualProfiling.o
+`-- windows
+    |-- config.h
+    |-- GetTimeOfDay.cpp
+    |-- GetTimeOfDay.h
+    |-- Operators.h
+    |-- OverlappedSubmissionThread.cpp
+    |-- OverlappedSubmissionThread.h
+    |-- SocketPair.cpp
+    |-- SocketPair.h
+    |-- Sync.h
+    |-- TWinsockSingleton.cpp
+    |-- TWinsockSingleton.h
+    |-- WinFcntl.cpp
+    `-- WinFcntl.h
+
+8 directories, 239 files
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">先看比较孤立的 stdcxx.h , 主要 using 了</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;"><code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">std::bind</code>  , <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">std::function</code>  , <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">std::placeholder</code></p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">其中 std::function 可以 wrap 一个general的可调用对象，包括函数、lambda、bind对象。</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">bind 和 placeholder 的语义,<br/>
+auto f1=std::bind(f, placeholders::_3, placeholders::_1, placeholders::_4)</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">在调用 f1 时，原 f 的第一个参数放在 f1 的第3个位置，原 f 的第二个参数放在第一个位置，原 f 的第三个参数放在第 4 个位置。至于 f1 的第2个位置参数，则可以随便传个什么东西。</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">stdcxx.h 接下来利用宏定义识别编译器和库版本决定了使用 std 还是 boost 的智能指针</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">boost 中的 scoped_ptr 相当于 std::unique_ptr</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;"><strong style="line-height: 160%; box-sizing: content-box; font-weight: 700;">weak_ptr</strong><br/>
+防止循环引用和 hang 指针，不影响引用计数。<br/>
+可以通过 use_count() 获得对象引用计数<br/>
+expired() 判断对象是否过期<br/>
+lock() 生成一个shared_ptr</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;"><strong style="line-height: 160%; box-sizing: content-box; font-weight: 700;">const_pointer_cast;<br/>
+dynamic_pointer_cast;<br/>
+reinterpret_pointer_cast    // C++17<br/>
+static_pointer_cast;</strong></p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">对 shared_ptr 内部的对象指针做转换, 返回一个shared_ptr.<br/>
+比如  <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">dynamic_pointer_cast&lt;derived&gt;(base_sp_ptr);</code><br/>
+C++20 之后参数可以传右值</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;"><span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">//	(since C++20)</span>
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">template</span>&lt; <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">class</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">T</span>, <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">class</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">U</span> &gt;
+<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">std</span>:</span>:<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">shared_ptr</span>&lt;T&gt; static_pointer_cast( <span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">std</span>::<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">shared_ptr</span>&lt;U&gt;&amp;&amp; r ) <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">noexcept</span>;
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;"><strong style="line-height: 160%; box-sizing: content-box; font-weight: 700;">enable_shared_from_this</strong></p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">创建一个类T时，让T继承自 enable_shared_from_this&lt;T&gt; , 于是 T 就有了成员函数 <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">shared_from_this</code> <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">weak_from_this</code><br/>
+返回类型可能为 <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">shared_ptr&lt;T&gt;</code>   <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">shared_ptr&lt;T const&gt;</code>  <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">weak_ptr&lt;T&gt;</code>  <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">weak_ptr&lt;T const&gt;</code><br/>
+注意 在 执行T的构造函数之前，会先调用 enable_shared_from_this 的构造函数，而此时 T 还是一个 &quot;不完整的类型&quot;(惊了，这也能编译过) 所以在 T的构造函数中调用 share_from_this 等函数是一定报错的，在 boost-1.69.0 中的情况是 <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">mutable weak_ptr&lt;T&gt; weak_this_</code> 这个 private 成员被检测到是空指针而抛出异常。如果通过智能指针构造 T 对象(注意不要直接仅仅在堆上new)，在构造函数执行过程中会初始化 weak_this_ 这个成员，所以后续可以调用 <code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">shared_from_this</code></p>
+<hr style="line-height: 160%; box-sizing: content-box; border-top: 1px solid #eee; margin: 16px 0;"/>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">最后尝试一下用 不完整的类型实例化模板，测试下来是可行的</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;"><span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">Y</span>;</span>
+
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">template</span> &lt;<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">typename</span> T&gt;
+<span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">X</span>
+{</span>
+       X()
+       {
+              <span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">cout</span> &lt;&lt; <span style="color: #d69d85; line-height: 160%; box-sizing: content-box;">&quot;nothing&quot;</span> &lt;&lt; <span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">endl</span>;
+       }
+};
+
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">auto</span> x = X&lt;Y&gt;();    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">// OK</span>
+
+</code></pre>
+</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">%23%20Apache%20thrift%20C%2B%2B%20%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%0A%0Athrift%20%E7%9A%84%20C%2B%2B%20%E6%BA%90%E7%A0%81%E4%B8%BB%E8%A6%81%E5%9C%A8%E8%BF%99%E9%87%8C%0A%0A%5Bthrift%5Cthrift-0.12.0%5Clib%5Ccpp%5Csrc%5Cthrift%5D(https%3A%2F%2Fthrift.apache.org%2Fdownload)%0A%0A%E5%85%88%20tree%20%E4%B8%80%E4%B8%8B%E7%9C%8B%E7%9C%8B%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84%0A%0A%60%60%60%0A%7C--%20async%0A%7C%20%20%20%7C--%20TAsyncBufferProcessor.h%0A%7C%20%20%20%7C--%20TAsyncChannel.cpp%0A%7C%20%20%20%7C--%20TAsyncChannel.h%0A%7C%20%20%20%7C--%20TAsyncChannel.lo%0A%7C%20%20%20%7C--%20TAsyncChannel.o%0A%7C%20%20%20%7C--%20TAsyncDispatchProcessor.h%0A%7C%20%20%20%7C--%20TAsyncProcessor.h%0A%7C%20%20%20%7C--%20TAsyncProtocolProcessor.cpp%0A%7C%20%20%20%7C--%20TAsyncProtocolProcessor.h%0A%7C%20%20%20%7C--%20TAsyncProtocolProcessor.lo%0A%7C%20%20%20%7C--%20TAsyncProtocolProcessor.o%0A%7C%20%20%20%7C--%20TConcurrentClientSyncInfo.cpp%0A%7C%20%20%20%7C--%20TConcurrentClientSyncInfo.h%0A%7C%20%20%20%7C--%20TConcurrentClientSyncInfo.lo%0A%7C%20%20%20%7C--%20TConcurrentClientSyncInfo.o%0A%7C%20%20%20%7C--%20TEvhttpClientChannel.cpp%0A%7C%20%20%20%7C--%20TEvhttpClientChannel.h%0A%7C%20%20%20%7C--%20TEvhttpServer.cpp%0A%7C%20%20%20%60--%20TEvhttpServer.h%0A%7C--%20concurrency%0A%7C%20%20%20%7C--%20BoostMonitor.cpp%0A%7C%20%20%20%7C--%20BoostMutex.cpp%0A%7C%20%20%20%7C--%20BoostThreadFactory.cpp%0A%7C%20%20%20%7C--%20BoostThreadFactory.h%0A%7C%20%20%20%7C--%20Exception.h%0A%7C%20%20%20%7C--%20FunctionRunner.h%0A%7C%20%20%20%7C--%20Monitor.cpp%0A%7C%20%20%20%7C--%20Monitor.h%0A%7C%20%20%20%7C--%20Monitor.lo%0A%7C%20%20%20%7C--%20Monitor.o%0A%7C%20%20%20%7C--%20Mutex.cpp%0A%7C%20%20%20%7C--%20Mutex.h%0A%7C%20%20%20%7C--%20Mutex.lo%0A%7C%20%20%20%7C--%20Mutex.o%0A%7C%20%20%20%7C--%20PlatformThreadFactory.h%0A%7C%20%20%20%7C--%20PosixThreadFactory.cpp%0A%7C%20%20%20%7C--%20PosixThreadFactory.h%0A%7C%20%20%20%7C--%20PosixThreadFactory.lo%0A%7C%20%20%20%7C--%20PosixThreadFactory.o%0A%7C%20%20%20%7C--%20StdMonitor.cpp%0A%7C%20%20%20%7C--%20StdMutex.cpp%0A%7C%20%20%20%7C--%20StdThreadFactory.cpp%0A%7C%20%20%20%7C--%20StdThreadFactory.h%0A%7C%20%20%20%7C--%20Thread.h%0A%7C%20%20%20%7C--%20ThreadManager.cpp%0A%7C%20%20%20%7C--%20ThreadManager.h%0A%7C%20%20%20%7C--%20ThreadManager.lo%0A%7C%20%20%20%7C--%20ThreadManager.o%0A%7C%20%20%20%7C--%20TimerManager.cpp%0A%7C%20%20%20%7C--%20TimerManager.h%0A%7C%20%20%20%7C--%20TimerManager.lo%0A%7C%20%20%20%7C--%20TimerManager.o%0A%7C%20%20%20%7C--%20Util.cpp%0A%7C%20%20%20%7C--%20Util.h%0A%7C%20%20%20%7C--%20Util.lo%0A%7C%20%20%20%60--%20Util.o%0A%7C--%20config.h%0A%7C--%20processor%0A%7C%20%20%20%7C--%20PeekProcessor.cpp%0A%7C%20%20%20%7C--%20PeekProcessor.h%0A%7C%20%20%20%7C--%20PeekProcessor.lo%0A%7C%20%20%20%7C--%20TPipeServer.h%0A%7C%20%20%20%7C--%20TPipeServer.lo%0A%7C%20%20%20%7C--%20TPipeServer.o%0A%7C%20%20%20%7C--%20TServerSocket.cpp%0A%7C%20%20%20%7C--%20TServerSocket.h%0A%7C%20%20%20%7C--%20TServerSocket.lo%0A%7C%20%20%20%7C--%20TServerSocket.o%0A%7C%20%20%20%7C--%20TServerTransport.h%0A%7C%20%20%20%7C--%20TShortReadTransport.h%0A%7C%20%20%20%7C--%20TSimpleFileTransport.cpp%0A%7C%20%20%20%7C--%20TSimpleFileTransport.h%0A%7C%20%20%20%7C--%20TSimpleFileTransport.lo%0A%7C%20%20%20%7C--%20TSimpleFileTransport.o%0A%7C%20%20%20%7C--%20TSocket.cpp%0A%7C%20%20%20%7C--%20TSocket.h%0A%7C%20%20%20%7C--%20TSocket.lo%0A%7C%20%20%20%7C--%20TSocket.o%0A%7C%20%20%20%7C--%20TSocketPool.cpp%0A%7C%20%20%20%7C--%20TSocketPool.h%0A%7C%20%20%20%7C--%20TSocketPool.lo%0A%7C%20%20%20%7C--%20TSocketPool.o%0A%7C%20%20%20%7C--%20TSSLServerSocket.cpp%0A%7C%20%20%20%7C--%20TSSLServerSocket.h%0A%7C%20%20%20%7C--%20TSSLServerSocket.lo%0A%7C%20%20%20%7C--%20TSSLServerSocket.o%0A%7C%20%20%20%7C--%20TSSLSocket.cpp%0A%7C%20%20%20%7C--%20TSSLSocket.h%0A%7C%20%20%20%7C--%20TSSLSocket.lo%0A%7C%20%20%20%7C--%20TSSLSocket.o%0A%7C%20%20%20%7C--%20TTransportException.cpp%0A%7C%20%20%20%7C--%20TTransportException.h%0A%7C%20%20%20%7C--%20TTransportException.lo%0A%7C%20%20%20%7C--%20TTransportException.o%0A%7C%20%20%20%7C--%20TTransport.h%0A%7C%20%20%20%7C--%20TTransportUtils.cpp%0A%7C%20%20%20%7C--%20TTransportUtils.h%0A%7C%20%20%20%7C--%20TTransportUtils.lo%0A%7C%20%20%20%7C--%20TTransportUtils.o%0A%7C%20%20%20%7C--%20TVirtualTransport.h%0A%7C%20%20%20%7C--%20TZlibTransport.cpp%0A%7C%20%20%20%60--%20TZlibTransport.h%0A%7C--%20TToString.h%0A%7C--%20VirtualProfiling.cpp%0A%7C--%20VirtualProfiling.lo%0A%7C--%20VirtualProfiling.o%0A%60--%20windows%0A%20%20%20%20%7C--%20config.h%0A%20%20%20%20%7C--%20GetTimeOfDay.cpp%0A%20%20%20%20%7C--%20GetTimeOfDay.h%0A%20%20%20%20%7C--%20Operators.h%0A%20%20%20%20%7C--%20OverlappedSubmissionThread.cpp%0A%20%20%20%20%7C--%20OverlappedSubmissionThread.h%0A%20%20%20%20%7C--%20SocketPair.cpp%0A%20%20%20%20%7C--%20SocketPair.h%0A%20%20%20%20%7C--%20Sync.h%0A%20%20%20%20%7C--%20TWinsockSingleton.cpp%0A%20%20%20%20%7C--%20TWinsockSingleton.h%0A%20%20%20%20%7C--%20WinFcntl.cpp%0A%20%20%20%20%60--%20WinFcntl.h%0A%0A8%20directories%2C%20239%20files%0A%60%60%60%0A%0A%E5%85%88%E7%9C%8B%E6%AF%94%E8%BE%83%E5%AD%A4%E7%AB%8B%E7%9A%84%20stdcxx.h%20%2C%20%E4%B8%BB%E8%A6%81%20using%20%E4%BA%86%0A%0A%20%60std%3A%3Abind%60%20%20%2C%20%60std%3A%3Afunction%60%20%20%2C%20%60std%3A%3Aplaceholder%60%0A%0A%E5%85%B6%E4%B8%AD%20std%3A%3Afunction%20%E5%8F%AF%E4%BB%A5%20wrap%20%E4%B8%80%E4%B8%AAgeneral%E7%9A%84%E5%8F%AF%E8%B0%83%E7%94%A8%E5%AF%B9%E8%B1%A1%EF%BC%8C%E5%8C%85%E6%8B%AC%E5%87%BD%E6%95%B0%E3%80%81lambda%E3%80%81bind%E5%AF%B9%E8%B1%A1%E3%80%82%0A%0Abind%20%E5%92%8C%20placeholder%20%E7%9A%84%E8%AF%AD%E4%B9%89%2C%0Aauto%20f1%3Dstd%3A%3Abind(f%2C%C2%A0placeholders%3A%3A%5C_3%2C%20placeholders%3A%3A%5C_1%2C%20placeholders%3A%3A%5C_4)%0A%0A%E5%9C%A8%E8%B0%83%E7%94%A8%20f1%20%E6%97%B6%EF%BC%8C%E5%8E%9F%20f%20%E7%9A%84%E7%AC%AC%E4%B8%80%E4%B8%AA%E5%8F%82%E6%95%B0%E6%94%BE%E5%9C%A8%20f1%20%E7%9A%84%E7%AC%AC3%E4%B8%AA%E4%BD%8D%E7%BD%AE%EF%BC%8C%E5%8E%9F%20f%20%E7%9A%84%E7%AC%AC%E4%BA%8C%E4%B8%AA%E5%8F%82%E6%95%B0%E6%94%BE%E5%9C%A8%E7%AC%AC%E4%B8%80%E4%B8%AA%E4%BD%8D%E7%BD%AE%EF%BC%8C%E5%8E%9F%20f%20%E7%9A%84%E7%AC%AC%E4%B8%89%E4%B8%AA%E5%8F%82%E6%95%B0%E6%94%BE%E5%9C%A8%E7%AC%AC%204%20%E4%B8%AA%E4%BD%8D%E7%BD%AE%E3%80%82%E8%87%B3%E4%BA%8E%20f1%20%E7%9A%84%E7%AC%AC2%E4%B8%AA%E4%BD%8D%E7%BD%AE%E5%8F%82%E6%95%B0%EF%BC%8C%E5%88%99%E5%8F%AF%E4%BB%A5%E9%9A%8F%E4%BE%BF%E4%BC%A0%E4%B8%AA%E4%BB%80%E4%B9%88%E4%B8%9C%E8%A5%BF%E3%80%82%0A%0Astdcxx.h%20%E6%8E%A5%E4%B8%8B%E6%9D%A5%E5%88%A9%E7%94%A8%E5%AE%8F%E5%AE%9A%E4%B9%89%E8%AF%86%E5%88%AB%E7%BC%96%E8%AF%91%E5%99%A8%E5%92%8C%E5%BA%93%E7%89%88%E6%9C%AC%E5%86%B3%E5%AE%9A%E4%BA%86%E4%BD%BF%E7%94%A8%20std%20%E8%BF%98%E6%98%AF%20boost%20%E7%9A%84%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88%0A%0Aboost%20%E4%B8%AD%E7%9A%84%20scoped_ptr%20%E7%9B%B8%E5%BD%93%E4%BA%8E%20std%3A%3Aunique_ptr%0A%0A**weak_ptr**%0A%E9%98%B2%E6%AD%A2%E5%BE%AA%E7%8E%AF%E5%BC%95%E7%94%A8%E5%92%8C%20hang%20%E6%8C%87%E9%92%88%EF%BC%8C%E4%B8%8D%E5%BD%B1%E5%93%8D%E5%BC%95%E7%94%A8%E8%AE%A1%E6%95%B0%E3%80%82%0A%E5%8F%AF%E4%BB%A5%E9%80%9A%E8%BF%87%20use_count()%20%E8%8E%B7%E5%BE%97%E5%AF%B9%E8%B1%A1%E5%BC%95%E7%94%A8%E8%AE%A1%E6%95%B0%0Aexpired()%20%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E8%BF%87%E6%9C%9F%0Alock()%20%E7%94%9F%E6%88%90%E4%B8%80%E4%B8%AAshared_ptr%0A%0A%0A**const_pointer_cast%3B%0Adynamic_pointer_cast%3B%0Areinterpret_pointer_cast%20%20%20%20%2F%2F%20C%2B%2B17%0Astatic_pointer_cast%3B**%0A%0A%E5%AF%B9%20shared_ptr%20%E5%86%85%E9%83%A8%E7%9A%84%E5%AF%B9%E8%B1%A1%E6%8C%87%E9%92%88%E5%81%9A%E8%BD%AC%E6%8D%A2%2C%20%E8%BF%94%E5%9B%9E%E4%B8%80%E4%B8%AAshared_ptr.%20%0A%E6%AF%94%E5%A6%82%20%20%60dynamic_pointer_cast%3Cderived%3E(base_sp_ptr)%3B%60%0AC%2B%2B20%20%E4%B9%8B%E5%90%8E%E5%8F%82%E6%95%B0%E5%8F%AF%E4%BB%A5%E4%BC%A0%E5%8F%B3%E5%80%BC%0A%60%60%60%20c%2B%2B%0A%2F%2F%09(since%20C%2B%2B20)%0Atemplate%3C%20class%20T%2C%20class%20U%20%3E%0Astd%3A%3Ashared_ptr%3CT%3E%20static_pointer_cast(%20std%3A%3Ashared_ptr%3CU%3E%26%26%20r%20)%20noexcept%3B%0A%60%60%60%0A%0A**enable_shared_from_this**%0A%0A%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E7%B1%BBT%E6%97%B6%EF%BC%8C%E8%AE%A9T%E7%BB%A7%E6%89%BF%E8%87%AA%20enable_shared_from_this%3CT%3E%20%2C%20%E4%BA%8E%E6%98%AF%20T%20%E5%B0%B1%E6%9C%89%E4%BA%86%E6%88%90%E5%91%98%E5%87%BD%E6%95%B0%20%60shared_from_this%60%20%60weak_from_this%60%20%20%20%0A%E8%BF%94%E5%9B%9E%E7%B1%BB%E5%9E%8B%E5%8F%AF%E8%83%BD%E4%B8%BA%20%60shared_ptr%3CT%3E%60%20%20%20%60shared_ptr%3CT%20const%3E%60%20%20%60weak_ptr%3CT%3E%60%20%20%60weak_ptr%3CT%20const%3E%60%0A%E6%B3%A8%E6%84%8F%20%E5%9C%A8%20%E6%89%A7%E8%A1%8CT%E7%9A%84%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E4%B9%8B%E5%89%8D%EF%BC%8C%E4%BC%9A%E5%85%88%E8%B0%83%E7%94%A8%20enable_shared_from_this%20%E7%9A%84%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%EF%BC%8C%E8%80%8C%E6%AD%A4%E6%97%B6%20T%20%E8%BF%98%E6%98%AF%E4%B8%80%E4%B8%AA%20%22%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%22(%E6%83%8A%E4%BA%86%EF%BC%8C%E8%BF%99%E4%B9%9F%E8%83%BD%E7%BC%96%E8%AF%91%E8%BF%87)%20%E6%89%80%E4%BB%A5%E5%9C%A8%20T%E7%9A%84%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E4%B8%AD%E8%B0%83%E7%94%A8%20share_from_this%20%E7%AD%89%E5%87%BD%E6%95%B0%E6%98%AF%E4%B8%80%E5%AE%9A%E6%8A%A5%E9%94%99%E7%9A%84%EF%BC%8C%E5%9C%A8%20boost-1.69.0%20%E4%B8%AD%E7%9A%84%E6%83%85%E5%86%B5%E6%98%AF%20%60mutable%20weak_ptr%3CT%3E%20weak_this_%60%20%E8%BF%99%E4%B8%AA%20private%20%E6%88%90%E5%91%98%E8%A2%AB%E6%A3%80%E6%B5%8B%E5%88%B0%E6%98%AF%E7%A9%BA%E6%8C%87%E9%92%88%E8%80%8C%E6%8A%9B%E5%87%BA%E5%BC%82%E5%B8%B8%E3%80%82%E5%A6%82%E6%9E%9C%E9%80%9A%E8%BF%87%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88%E6%9E%84%E9%80%A0%20T%20%E5%AF%B9%E8%B1%A1(%E6%B3%A8%E6%84%8F%E4%B8%8D%E8%A6%81%E7%9B%B4%E6%8E%A5%E4%BB%85%E4%BB%85%E5%9C%A8%E5%A0%86%E4%B8%8Anew)%EF%BC%8C%E5%9C%A8%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%E4%B8%AD%E4%BC%9A%E5%88%9D%E5%A7%8B%E5%8C%96%20weak_this_%20%E8%BF%99%E4%B8%AA%E6%88%90%E5%91%98%EF%BC%8C%E6%89%80%E4%BB%A5%E5%90%8E%E7%BB%AD%E5%8F%AF%E4%BB%A5%E8%B0%83%E7%94%A8%20%60shared_from_this%60%20%0A%0A---%0A%0A%0A%E6%9C%80%E5%90%8E%E5%B0%9D%E8%AF%95%E4%B8%80%E4%B8%8B%E7%94%A8%20%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%9A%84%E7%B1%BB%E5%9E%8B%E5%AE%9E%E4%BE%8B%E5%8C%96%E6%A8%A1%E6%9D%BF%EF%BC%8C%E6%B5%8B%E8%AF%95%E4%B8%8B%E6%9D%A5%E6%98%AF%E5%8F%AF%E8%A1%8C%E7%9A%84%0A%0A%60%60%60%20C%2B%2B%0Astruct%20Y%3B%0A%0Atemplate%20%3Ctypename%20T%3E%0Astruct%20X%0A%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0X()%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0cout%20%3C%3C%20%22nothing%22%20%3C%3C%20endl%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%7D%0A%7D%3B%0A%0Aauto%20x%20%3D%20X%3CY%3E()%3B%20%20%20%20%2F%2F%20OK%0A%0A%60%60%60%0A%0A%0A%0A%0A%0A%0A%0A%0A%0A%0A</center></span>
+</div></body>
+</html>

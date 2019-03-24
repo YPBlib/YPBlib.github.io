@@ -1,0 +1,35 @@
+
+
+  <!DOCTYPE html>
+  <html lang="zh-cn">
+  <meta charset="UTF-8">
+  <head>
+    <title>thrift C++源码阅读 TToString.h</title>
+  </head>
+<body>
+
+
+<div><span><div style="font-size: 14px; margin: 0; padding: 0; width: 100%;"><p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">这个文件里主要做了把对象变成string这件事<br/>
+开头一个通用的模板</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">namespace</span> apache {
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">namespace</span> thrift {
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">template</span> &lt;<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">typename</span> T&gt;
+<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">std</span>::<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;"><span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">string</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">to_string</span><span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">(<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">const</span> T&amp; t)</span> </span>{
+<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">std</span>::<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">ostringstream</span> o;
+o &lt;&lt; t;
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> o.str();
+}
+
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">对 容器类(map,set,vector) 的操作都是直接从 begin to_string 到 end， 其中需要特化 pair 的版本</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">template</span> &lt;<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">typename</span> K, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">typename</span> V&gt;
+<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">std</span>::<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;"><span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">string</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">to_string</span><span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">(<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">const</span> <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">typename</span> <span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">std</span>::pair&lt;K, V&gt;&amp; v)</span> </span>{
+<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">std</span>::<span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">ostringstream</span> o;
+o &lt;&lt; to_string(v.first) &lt;&lt; <span style="color: #d69d85; line-height: 160%; box-sizing: content-box;">&quot;: &quot;</span> &lt;&lt; to_string(v.second);
+<span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> o.str();
+}
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">以及对 浮点类的特殊处理，即 float，double， long double<br/>
+注释里提到 C++11 之后直接使用 std::numeric_limits::max_digits10 获取需要保留的精度</p>
+</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">%E8%BF%99%E4%B8%AA%E6%96%87%E4%BB%B6%E9%87%8C%E4%B8%BB%E8%A6%81%E5%81%9A%E4%BA%86%E6%8A%8A%E5%AF%B9%E8%B1%A1%E5%8F%98%E6%88%90string%E8%BF%99%E4%BB%B6%E4%BA%8B%0A%E5%BC%80%E5%A4%B4%E4%B8%80%E4%B8%AA%E9%80%9A%E7%94%A8%E7%9A%84%E6%A8%A1%E6%9D%BF%0A%60%60%60%20C%2B%2B%0Anamespace%20apache%20%7B%0Anamespace%20thrift%20%7B%0Atemplate%20%3Ctypename%20T%3E%0Astd%3A%3Astring%20to_string(const%20T%26%20t)%20%7B%0Astd%3A%3Aostringstream%20o%3B%0Ao%20%3C%3C%20t%3B%0Areturn%20o.str()%3B%0A%7D%0A%0A%60%60%60%0A%0A%E5%AF%B9%20%E5%AE%B9%E5%99%A8%E7%B1%BB(map%2Cset%2Cvector)%20%E7%9A%84%E6%93%8D%E4%BD%9C%E9%83%BD%E6%98%AF%E7%9B%B4%E6%8E%A5%E4%BB%8E%20begin%20to_string%20%E5%88%B0%20end%EF%BC%8C%20%E5%85%B6%E4%B8%AD%E9%9C%80%E8%A6%81%E7%89%B9%E5%8C%96%20pair%20%E7%9A%84%E7%89%88%E6%9C%AC%0A%60%60%60%20C%2B%2B%0Atemplate%20%3Ctypename%20K%2C%20typename%20V%3E%0Astd%3A%3Astring%20to_string(const%20typename%20std%3A%3Apair%3CK%2C%20V%3E%26%20v)%20%7B%0Astd%3A%3Aostringstream%20o%3B%0Ao%20%3C%3C%20to_string(v.first)%20%3C%3C%20%22%3A%20%22%20%3C%3C%20to_string(v.second)%3B%0Areturn%20o.str()%3B%0A%7D%0A%60%60%60%0A%0A%E4%BB%A5%E5%8F%8A%E5%AF%B9%20%E6%B5%AE%E7%82%B9%E7%B1%BB%E7%9A%84%E7%89%B9%E6%AE%8A%E5%A4%84%E7%90%86%EF%BC%8C%E5%8D%B3%20float%EF%BC%8Cdouble%EF%BC%8C%20long%20double%0A%E6%B3%A8%E9%87%8A%E9%87%8C%E6%8F%90%E5%88%B0%20C%2B%2B11%20%E4%B9%8B%E5%90%8E%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8%20std%3A%3Anumeric_limits%3A%3Amax_digits10%20%E8%8E%B7%E5%8F%96%E9%9C%80%E8%A6%81%E4%BF%9D%E7%95%99%E7%9A%84%E7%B2%BE%E5%BA%A6%0A%0A</center></span>
+</div></body></html>
