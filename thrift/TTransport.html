@@ -2,12 +2,12 @@
 <html lang="zh-cn">
 <meta charset="UTF-8">
 <head>
-  <title>thrift C++源码阅读 TToString.h</title>
+  <title>thrift C++源码阅读 TTransport</title>
 </head>
 <body>
 
 
-<div><span><div style="font-size: 14px; margin: 0; padding: 0; width: 100%;"><h1 style="line-height: 160%; box-sizing: content-box; font-weight: 700; font-size: 41px; border-bottom: 3px double #999; color: #000; margin-top: 14px;">Apache thrift C++ 源码阅读 TProtocol</h1>
+<div><span><div style="font-size: 14px; margin: 0; padding: 0; width: 100%;"><h1 style="line-height: 160%; box-sizing: content-box; font-weight: 700; font-size: 41px; border-bottom: 3px double #999; color: #000; margin-top: 14px;">Apache thrift C++ 源码阅读 TTransport</h1>
 <p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">本来想看 Tprotocol 的，cd 进去发现很多实现都依赖于  TTransport 。而 TTransport 里的东西相对独立，没有依赖更早的文件； 更何况http ssl pipe传输什么的相信也有不少学问，那就从 TTransport 开始看吧。</p>
 <p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">TTransport.h</p>
 <p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">首先定义了 TTransport 这个类，声明了 isOpen peek open close read read_virt readAll readAll_virt readEnd write write_virt writeEnd flush borrow consume consume_virt getOrigin  等一系列成员函数，即读写相关，其中除了consume borrow write readAll read 和构造函数外全为虚函数。</p>
