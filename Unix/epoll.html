@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<meta charset="UTF-8">
+<head>
+  <title>select，poll 和 epoll</title>
+</head>
+
+<body>
+
+
+<div><span><div style="font-size: 14px; margin: 0; padding: 0; width: 100%;"><h1 style="line-height: 160%; box-sizing: content-box; font-weight: 700; font-size: 41px; border-bottom: 3px double #999; color: #000; margin-top: 14px;">select，poll 和 epoll</h1>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">linux 内核版本 4.15.0</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">include\linux\syscalls.h 里有关于系统调用的宏定义：</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;">
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE0(sname)                  \
+    SYSCALL_METADATA(_##sname, 0);              \
+    asmlinkage long sys_##sname(void)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE1(name, ...) SYSCALL_DEFINEx(1, _##name, __VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE2(name, ...) SYSCALL_DEFINEx(2, _##name, __VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE3(name, ...) SYSCALL_DEFINEx(3, _##name, __VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE4(name, ...) SYSCALL_DEFINEx(4, _##name, __VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE5(name, ...) SYSCALL_DEFINEx(5, _##name, __VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE6(name, ...) SYSCALL_DEFINEx(6, _##name, __VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINE_MAXARGS  6</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> SYSCALL_DEFINEx(x, sname, ...)              \
+    SYSCALL_METADATA(sname, x, __VA_ARGS__)         \
+    __SYSCALL_DEFINEx(x, sname, __VA_ARGS__)</span>
+
+
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> __PROTECT(...) asmlinkage_protect(__VA_ARGS__)</span>
+<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">#<span style="color: #9b9b9b; line-height: 160%; box-sizing: content-box;">define</span> __SYSCALL_DEFINEx(x, name, ...)                 \
+    asmlinkage long sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))   \
+        __attribute__((alias(__stringify(SyS##name))));     \
+    static inline long SYSC##name(__MAP(x,__SC_DECL,__VA_ARGS__));  \
+    asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__));  \
+    asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__))   \
+    {                               \
+        long ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));  \
+        __MAP(x,__SC_TEST,__VA_ARGS__);             \
+        __PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));   \
+        return ret;                     \
+    }                               \
+    static inline long SYSC##name(__MAP(x,__SC_DECL,__VA_ARGS__))</span>
+
+
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">poll 和 select 相关定义在这里<br/>
+fs\select.c<br/>
+select：</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;">
+COMPAT_SYSCALL_DEFINE5(select, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span>, n, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">compat_ulong_t</span> __user *, inp,
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">compat_ulong_t</span> __user *, outp, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">compat_ulong_t</span> __user *, <span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">exp</span>,
+    struct compat_timeval __user *, tvp)
+{
+    <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">timespec64</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">end_time</span>, *<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">to</span> = <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">NULL</span>;</span>
+    <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">compat_timeval</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">tv</span>;</span>
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span> ret;
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (tvp) {
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (copy_from_user(&amp;tv, tvp, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">sizeof</span>(tv)))
+            <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> -EFAULT;
+        to = &amp;end_time;
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (poll_select_set_timeout(to,
+                tv.tv_sec + (tv.tv_usec / USEC_PER_SEC),
+                (tv.tv_usec % USEC_PER_SEC) * NSEC_PER_USEC))
+            <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> -EINVAL;
+    }
+    ret = compat_core_sys_select(n, inp, outp, <span style="color: #4ec9b0; line-height: 160%; box-sizing: content-box;">exp</span>, to);
+    ret = compat_poll_select_copy_remaining(&amp;end_time, tvp, <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;">1</span>, ret);
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> ret;
+}
+
+
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">追踪到 do_select 之后，可以看到是 retval 逐一累加判断函数是否结束的。</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">poll：</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;">
+SYSCALL_DEFINE3(poll, struct pollfd __user *, ufds, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">unsigned</span> <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span>, nfds,
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span>, timeout_msecs)
+{
+    <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">timespec64</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">end_time</span>, *<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">to</span> = <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">NULL</span>;</span>
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span> ret;
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (timeout_msecs &gt;= <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;">0</span>) {
+        to = &amp;end_time;
+        poll_select_set_timeout(to, timeout_msecs / MSEC_PER_SEC,
+            NSEC_PER_MSEC * (timeout_msecs % MSEC_PER_SEC));
+    }
+    ret = do_sys_poll(ufds, nfds, to);
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (ret == -EINTR) {
+        <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">restart_block</span> *<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">restart_block</span>;</span>
+        restart_block = &amp;current-&gt;restart_block;
+        restart_block-&gt;fn = do_restart_poll;
+        restart_block-&gt;poll.ufds = ufds;
+        restart_block-&gt;poll.nfds = nfds;
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (timeout_msecs &gt;= <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;">0</span>) {
+            restart_block-&gt;poll.tv_sec = end_time.tv_sec;
+            restart_block-&gt;poll.tv_nsec = end_time.tv_nsec;
+            restart_block-&gt;poll.has_timeout = <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;">1</span>;
+        } <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">else</span>
+            restart_block-&gt;poll.has_timeout = <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;">0</span>;
+        ret = -ERESTART_RESTARTBLOCK;
+    }
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> ret;
+}
+
+
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">在函数 do_poll 中，<br/>
+<code style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; color: #c1788b; padding: 4px 4px 2px 0; letter-spacing: -.3px;">for (walk = list; walk != NULL; walk = walk-&gt;next) {</code></p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">说明 poll 是通过一个链表检测文件的。</p>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">epoll 相关调用在 fs\eventpoll.c 中</p>
+<pre style="line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; margin: 2px 0 8px; background-color: #f5f7f8;"><code style="display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;">
+SYSCALL_DEFINE4(epoll_wait, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span>, epfd, struct epoll_event __user *, events,
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span>, maxevents, <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span>, timeout)
+{
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">int</span> error;
+    <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">fd</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">f</span>;</span>
+    <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;"><span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">struct</span> <span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">eventpoll</span> *<span style="color: #dcdcdc; line-height: 160%; box-sizing: content-box;">ep</span>;</span>
+    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">/* The maximum number of event must be greater than zero */</span>
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (maxevents &lt;= <span style="color: #b8d7a3; line-height: 160%; box-sizing: content-box;">0</span> || maxevents &gt; EP_MAX_EVENTS)
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> -EINVAL;
+    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">/* Verify that the area passed by the user is writeable */</span>
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (!access_ok(VERIFY_WRITE, events, maxevents * <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">sizeof</span>(struct epoll_event)))
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> -EFAULT;
+    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">/* Get the &quot;struct file *&quot; for the eventpoll file */</span>
+    f = fdget(epfd);
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (!f.file)
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> -EBADF;
+    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">/*
+     * We have to check that the file structure underneath the fd
+     * the user passed to us _is_ an eventpoll file.
+     */</span>
+    error = -EINVAL;
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">if</span> (!is_file_epoll(f.file))
+        <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">goto</span> error_fput;
+    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">/*
+     * At this point it is safe to assume that the &quot;private_data&quot; contains
+     * our own data structure.
+     */</span>
+    ep = f.file-&gt;private_data;
+    <span style="color: #57a64a; font-style: italic; line-height: 160%; box-sizing: content-box;">/* Time to fish for events ... */</span>
+    error = ep_poll(ep, events, maxevents, timeout);
+error_fput:
+    fdput(f);
+    <span style="color: #569cd6; line-height: 160%; box-sizing: content-box;">return</span> error;
+}
+
+
+</code></pre>
+<p style="line-height: 160%; box-sizing: content-box; margin: 10px 0; color: #333;">最终 epoll 调用了  ep_scan_ready_list ，遗憾的是没看到 事件驱动相关的代码。</p>
+</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">%0A%23%20select%EF%BC%8Cpoll%20%E5%92%8C%20epoll%0A%0Alinux%20%E5%86%85%E6%A0%B8%E7%89%88%E6%9C%AC%204.15.0%0A%0Ainclude%5Clinux%5Csyscalls.h%20%E9%87%8C%E6%9C%89%E5%85%B3%E4%BA%8E%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E7%9A%84%E5%AE%8F%E5%AE%9A%E4%B9%89%EF%BC%9A%0A%0A%60%60%60%20C%0A%0A%23define%20SYSCALL_DEFINE0(sname)%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0SYSCALL_METADATA(_%23%23sname%2C%200)%3B%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0asmlinkage%20long%20sys_%23%23sname(void)%0A%23define%20SYSCALL_DEFINE1(name%2C%20...)%20SYSCALL_DEFINEx(1%2C%20_%23%23name%2C%20__VA_ARGS__)%0A%23define%20SYSCALL_DEFINE2(name%2C%20...)%20SYSCALL_DEFINEx(2%2C%20_%23%23name%2C%20__VA_ARGS__)%0A%23define%20SYSCALL_DEFINE3(name%2C%20...)%20SYSCALL_DEFINEx(3%2C%20_%23%23name%2C%20__VA_ARGS__)%0A%23define%20SYSCALL_DEFINE4(name%2C%20...)%20SYSCALL_DEFINEx(4%2C%20_%23%23name%2C%20__VA_ARGS__)%0A%23define%20SYSCALL_DEFINE5(name%2C%20...)%20SYSCALL_DEFINEx(5%2C%20_%23%23name%2C%20__VA_ARGS__)%0A%23define%20SYSCALL_DEFINE6(name%2C%20...)%20SYSCALL_DEFINEx(6%2C%20_%23%23name%2C%20__VA_ARGS__)%0A%23define%20SYSCALL_DEFINE_MAXARGS%C2%A0%C2%A06%0A%23define%20SYSCALL_DEFINEx(x%2C%20sname%2C%20...)%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0SYSCALL_METADATA(sname%2C%20x%2C%20__VA_ARGS__)%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0__SYSCALL_DEFINEx(x%2C%20sname%2C%20__VA_ARGS__)%0A%0A%0A%23define%20__PROTECT(...)%20asmlinkage_protect(__VA_ARGS__)%0A%23define%20__SYSCALL_DEFINEx(x%2C%20name%2C%20...)%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0asmlinkage%20long%20sys%23%23name(__MAP(x%2C__SC_DECL%2C__VA_ARGS__))%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0__attribute__((alias(__stringify(SyS%23%23name))))%3B%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0static%20inline%20long%20SYSC%23%23name(__MAP(x%2C__SC_DECL%2C__VA_ARGS__))%3B%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0asmlinkage%20long%20SyS%23%23name(__MAP(x%2C__SC_LONG%2C__VA_ARGS__))%3B%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0asmlinkage%20long%20SyS%23%23name(__MAP(x%2C__SC_LONG%2C__VA_ARGS__))%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%7B%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0long%20ret%20%3D%20SYSC%23%23name(__MAP(x%2C__SC_CAST%2C__VA_ARGS__))%3B%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0__MAP(x%2C__SC_TEST%2C__VA_ARGS__)%3B%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0__PROTECT(x%2C%20ret%2C__MAP(x%2C__SC_ARGS%2C__VA_ARGS__))%3B%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0return%20ret%3B%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0%7D%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%5C%0A%C2%A0%C2%A0%C2%A0%C2%A0static%20inline%20long%20SYSC%23%23name(__MAP(x%2C__SC_DECL%2C__VA_ARGS__))%0A%0A%0A%60%60%60%0A%0Apoll%20%E5%92%8C%20select%20%E7%9B%B8%E5%85%B3%E5%AE%9A%E4%B9%89%E5%9C%A8%E8%BF%99%E9%87%8C%0Afs%5Cselect.c%0Aselect%EF%BC%9A%0A%60%60%60%20C%0A%0ACOMPAT_SYSCALL_DEFINE5(select%2C%20int%2C%20n%2C%20compat_ulong_t%20__user%20*%2C%20inp%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0compat_ulong_t%20__user%20*%2C%20outp%2C%20compat_ulong_t%20__user%20*%2C%20exp%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0struct%20compat_timeval%20__user%20*%2C%20tvp)%0A%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0struct%20timespec64%20end_time%2C%20*to%20%3D%20NULL%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0struct%20compat_timeval%20tv%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0int%20ret%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(tvp)%20%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0if%20(copy_from_user(%26tv%2C%20tvp%2C%20sizeof(tv)))%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0return%20-EFAULT%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0to%20%3D%20%26end_time%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0if%20(poll_select_set_timeout(to%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0tv.tv_sec%20%2B%20(tv.tv_usec%20%2F%20USEC_PER_SEC)%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0(tv.tv_usec%20%25%20USEC_PER_SEC)%20*%20NSEC_PER_USEC))%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0return%20-EINVAL%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%7D%0A%C2%A0%C2%A0%C2%A0%C2%A0ret%20%3D%20compat_core_sys_select(n%2C%20inp%2C%20outp%2C%20exp%2C%20to)%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0ret%20%3D%20compat_poll_select_copy_remaining(%26end_time%2C%20tvp%2C%201%2C%20ret)%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0return%20ret%3B%0A%7D%0A%0A%0A%60%60%60%0A%0A%E8%BF%BD%E8%B8%AA%E5%88%B0%20do_select%20%E4%B9%8B%E5%90%8E%EF%BC%8C%E5%8F%AF%E4%BB%A5%E7%9C%8B%E5%88%B0%E6%98%AF%20retval%20%E9%80%90%E4%B8%80%E7%B4%AF%E5%8A%A0%E5%88%A4%E6%96%AD%E5%87%BD%E6%95%B0%E6%98%AF%E5%90%A6%E7%BB%93%E6%9D%9F%E7%9A%84%E3%80%82%0A%0Apoll%EF%BC%9A%0A%0A%60%60%60%20C%0A%0ASYSCALL_DEFINE3(poll%2C%20struct%20pollfd%20__user%20*%2C%20ufds%2C%20unsigned%20int%2C%20nfds%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0int%2C%20timeout_msecs)%0A%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0struct%20timespec64%20end_time%2C%20*to%20%3D%20NULL%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0int%20ret%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(timeout_msecs%20%3E%3D%200)%20%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0to%20%3D%20%26end_time%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0poll_select_set_timeout(to%2C%20timeout_msecs%20%2F%20MSEC_PER_SEC%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0NSEC_PER_MSEC%20*%20(timeout_msecs%20%25%20MSEC_PER_SEC))%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%7D%0A%C2%A0%C2%A0%C2%A0%C2%A0ret%20%3D%20do_sys_poll(ufds%2C%20nfds%2C%20to)%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(ret%20%3D%3D%20-EINTR)%20%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0struct%20restart_block%20*restart_block%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block%20%3D%20%26current-%3Erestart_block%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Efn%20%3D%20do_restart_poll%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Epoll.ufds%20%3D%20ufds%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Epoll.nfds%20%3D%20nfds%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0if%20(timeout_msecs%20%3E%3D%200)%20%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Epoll.tv_sec%20%3D%20end_time.tv_sec%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Epoll.tv_nsec%20%3D%20end_time.tv_nsec%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Epoll.has_timeout%20%3D%201%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%7D%20else%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0restart_block-%3Epoll.has_timeout%20%3D%200%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0ret%20%3D%20-ERESTART_RESTARTBLOCK%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%7D%0A%C2%A0%C2%A0%C2%A0%C2%A0return%20ret%3B%0A%7D%0A%0A%0A%60%60%60%0A%0A%E5%9C%A8%E5%87%BD%E6%95%B0%20do_poll%20%E4%B8%AD%EF%BC%8C%0A%60for%20(walk%20%3D%20list%3B%20walk%20!%3D%20NULL%3B%20walk%20%3D%20walk-%3Enext)%20%7B%60%20%0A%0A%E8%AF%B4%E6%98%8E%20poll%20%E6%98%AF%E9%80%9A%E8%BF%87%E4%B8%80%E4%B8%AA%E9%93%BE%E8%A1%A8%E6%A3%80%E6%B5%8B%E6%96%87%E4%BB%B6%E7%9A%84%E3%80%82%0A%0Aepoll%20%E7%9B%B8%E5%85%B3%E8%B0%83%E7%94%A8%E5%9C%A8%20fs%5Ceventpoll.c%20%E4%B8%AD%0A%0A%60%60%60%20C%0A%0ASYSCALL_DEFINE4(epoll_wait%2C%20int%2C%20epfd%2C%20struct%20epoll_event%20__user%20*%2C%20events%2C%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0int%2C%20maxevents%2C%20int%2C%20timeout)%0A%7B%0A%C2%A0%C2%A0%C2%A0%C2%A0int%20error%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0struct%20fd%20f%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0struct%20eventpoll%20*ep%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%2F*%20The%20maximum%20number%20of%20event%20must%20be%20greater%20than%20zero%20*%2F%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(maxevents%20%3C%3D%200%20%7C%7C%20maxevents%20%3E%20EP_MAX_EVENTS)%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0return%20-EINVAL%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%2F*%20Verify%20that%20the%20area%20passed%20by%20the%20user%20is%20writeable%20*%2F%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(!access_ok(VERIFY_WRITE%2C%20events%2C%20maxevents%20*%20sizeof(struct%20epoll_event)))%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0return%20-EFAULT%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%2F*%20Get%20the%20%22struct%20file%20*%22%20for%20the%20eventpoll%20file%20*%2F%0A%C2%A0%C2%A0%C2%A0%C2%A0f%20%3D%20fdget(epfd)%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(!f.file)%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0return%20-EBADF%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%2F*%0A%C2%A0%C2%A0%C2%A0%C2%A0%20*%20We%20have%20to%20check%20that%20the%20file%20structure%20underneath%20the%20fd%0A%C2%A0%C2%A0%C2%A0%C2%A0%20*%20the%20user%20passed%20to%20us%20_is_%20an%20eventpoll%20file.%0A%C2%A0%C2%A0%C2%A0%C2%A0%20*%2F%0A%C2%A0%C2%A0%C2%A0%C2%A0error%20%3D%20-EINVAL%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0if%20(!is_file_epoll(f.file))%0A%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0goto%20error_fput%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%2F*%0A%C2%A0%C2%A0%C2%A0%C2%A0%20*%20At%20this%20point%20it%20is%20safe%20to%20assume%20that%20the%20%22private_data%22%20contains%0A%C2%A0%C2%A0%C2%A0%C2%A0%20*%20our%20own%20data%20structure.%0A%C2%A0%C2%A0%C2%A0%C2%A0%20*%2F%0A%C2%A0%C2%A0%C2%A0%C2%A0ep%20%3D%20f.file-%3Eprivate_data%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0%2F*%20Time%20to%20fish%20for%20events%20...%20*%2F%0A%C2%A0%C2%A0%C2%A0%C2%A0error%20%3D%20ep_poll(ep%2C%20events%2C%20maxevents%2C%20timeout)%3B%0Aerror_fput%3A%0A%C2%A0%C2%A0%C2%A0%C2%A0fdput(f)%3B%0A%C2%A0%C2%A0%C2%A0%C2%A0return%20error%3B%0A%7D%0A%0A%0A%60%60%60%0A%0A%E6%9C%80%E7%BB%88%20epoll%20%E8%B0%83%E7%94%A8%E4%BA%86%20%20ep_scan_ready_list%20%EF%BC%8C%E9%81%97%E6%86%BE%E7%9A%84%E6%98%AF%E6%B2%A1%E7%9C%8B%E5%88%B0%20%E4%BA%8B%E4%BB%B6%E9%A9%B1%E5%8A%A8%E7%9B%B8%E5%85%B3%E7%9A%84%E4%BB%A3%E7%A0%81%E3%80%82%0A%0A%0A%0A%0A%0A%0A%0A%0A%0A</center></span>
+</div></body></html>
